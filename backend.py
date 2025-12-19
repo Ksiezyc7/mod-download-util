@@ -14,3 +14,7 @@ def search_mod(query, limit, mc_ver):
         return None
     return json_data["hits"]
     
+def get_dependencies(project_id):
+    res = requests.request("GET", f"{api_url}/project/{project_id}/dependencies", headers={"User-Agent" : user_agent})
+
+    return json.dumps(res.json(), indent=4)

@@ -6,16 +6,24 @@ add_flag("-s") # Search
 add_flag("-f") # Find dependencies
 add_flag("-d") # Download
 add_flag("-o", 1) # output file, defaults to "mods.txt"
+add_flag("-c", 1) # amount of search hits to show
 ofilename = "mods.txt"
 ifilename = ""
+top_c = 5 # amount of hits to show, defaults to 5
+mc_loader = 0
+m_version = "1.21.11" # minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
 
 args = parse_args()
 if(len(args["_"]) > 0):
     ifilename = args["_"][0]
 if("-o" in args):
     ofilename = args["-o"][0] if args["-o"][0] != "." else None
-
-
+if("-c" in args):
+    if(args["-c"][0] == None):
+        top_c = 5
+    else:
+        top_c = int(args["-c"][0]) if args["-c"][0].isnumeric() else 5
+print(args)
 
 search = "-s" in args.keys()
 find_dependecies = "-f" in args.keys()
@@ -29,10 +37,34 @@ if(not (search or find_dependecies or download)):
     exit()
 
 
-m_version = "1.21.11" # minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
-top_c = 5 # amount of hits to show, defaults to 5
+
+
 input_file_type = 0 # 0 for mod name list, 1 for id list
 operating_data = []
+
+def search_multiple(queries: list):
+    selected_mods = []
+    for q in queries:
+        hits = search_mod(q, top_c, m_version)
+        if(hits == None):
+            continue
+        if(top_c == 1):
+            selected_mods.append(hits[0]["project_id"])
+            continue
+
+
+        hit_number = 1
+        digit_c = len(str(abs(len(hits))))
+        for h in hits:
+            print(f"{str(hit_number).rjust(digit_c)} - {h["title"]}")
+            hit_number += 1
+        selected = input("> ")
+        print("")
+        if(selected.isdigit() and int(selected) > 0 and int(selected) <= len(hits)):
+            selected_mods.append(hits[int(selected) - 1]["project_id"])
+    return selected_mods
+
+
 def load_data():
     if(search):
         try:
@@ -68,7 +100,10 @@ def do_search_action():
     global operating_data
     operating_data = search_multiple(operating_data)
 
-
+def do_find_dependencies_action():
+    global operating_data
+    print(get_dependencies(operating_data[0]))
+    exit()
 
 
 
@@ -86,22 +121,7 @@ if(ifilename == ""):
 
 
 
-def search_multiple(queries: list):
-    selected_mods = []
-    for q in queries:
-        hits = search_mod(q, top_c, m_version)
-        if(hits == None):
-            continue
-        hit_number = 1
-        digit_c = len(str(abs(len(hits))))
-        for h in hits:
-            print(f"{str(hit_number).rjust(digit_c)} - {h["title"]}")
-            hit_number += 1
-        selected = input("> ")
-        print("")
-        if(selected.isdigit() and int(selected) > 0 and int(selected) <= len(hits)):
-            selected_mods.append(hits[int(selected) - 1]["project_id"])
-    return selected_mods
+
 
 
 def output():
@@ -129,4 +149,6 @@ if __name__ == "__main__":
     print(ofilename)
     if(search):
         do_search_action()
+    if(find_dependecies):
+        do_find_dependencies_action()
     output()    
