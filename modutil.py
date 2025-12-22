@@ -60,28 +60,36 @@ if(not (search or find_dependecies or download)):
 
 known_loaders = ["fabric", "forge", "quilt", "neoforge"]
 
-if(mc_loader not in known_loaders):
-    print(f"Unknown mod loader {mc_loader}")
-    print("Do you wish to continue? y/N")
-    choice = input("> ")
-    if(len(choice) > 0 and choice[0].lower() == "y"):
-        pass
-    else:
-        exit()
-    print("")
+# Download action uses already known mod ids and version ids so if the user is only downloading there is no need to verify these variables
 
-# Checks if Minecraft version matches regex
-# Either X.X.X or X.X (X can be any number)
-# If version is set to * (any version) this check is skipped
-if(re.fullmatch(r"[0-9]+\.[0-9]+(\.[0-9]+)?", m_version) == None and m_version != "*"):
-    print(f"Invalid? Minecraft version {m_version}")
-    print("Do you wish to continue? y/N")
-    choice = input("> ")
-    if(len(choice) > 0 and choice[0].lower() == "y"):
-        pass
-    else:
-        exit()
-    print("")
+print("")
+
+if(search or get_version or find_dependecies):
+    if(mc_loader == None):
+        print("Mod loader not specified!")
+        exit(2)
+    if(mc_loader not in known_loaders):
+        print(f"Unknown mod loader {mc_loader}")
+        print("Do you wish to continue? y/N")
+        choice = input("> ")
+        if(len(choice) > 0 and choice[0].lower() == "y"):
+            pass
+        else:
+            exit()
+        print("")
+
+    # Checks if Minecraft version matches regex
+    # Either X.X.X or X.X (X can be any number)
+    # If version is set to * (any version) this check is skipped
+    if(re.fullmatch(r"[0-9]+\.[0-9]+(\.[0-9]+)?", m_version) == None and m_version != "*"):
+        print(f"Invalid? Minecraft version {m_version}")
+        print("Do you wish to continue? y/N")
+        choice = input("> ")
+        if(len(choice) > 0 and choice[0].lower() == "y"):
+            pass
+        else:
+            exit()
+        print("")
 
 
 
@@ -134,9 +142,6 @@ def search_multiple(queries: list):
 
 def do_search_action():
     global operating_data
-    if(mc_loader == None):
-        print("Mod loader not specified!")
-        exit(2)
     operating_data = search_multiple(operating_data)
 
 def do_get_version_action():
