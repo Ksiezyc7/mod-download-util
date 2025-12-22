@@ -4,6 +4,7 @@ from backend import *
 from args_parser import *
 import re
 
+_mod_count = 0
 
 add_flag("-s") # Search
 add_flag("-g") # Get version id
@@ -13,14 +14,48 @@ add_flag("-o", 1) # output file, defaults to "mods.txt"
 add_flag("-c", 1) # amount of search hits to show
 add_flag("-v", 1) # minecraft version
 add_flag("-l", 1) # minecraft loader
+add_flag("-u") # output URLs
+
+add_flag("-h") # Help
 
 ofilename = "mods.txt"
+
+output_urls = False
+
 ifilename = ""
 top_c = 5 # amount of hits to show, defaults to 5
 mc_loader = None
 m_version = "1.21.11" # minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
 
+def display_help_text():
+    print("Usage:")
+    print("$ py modutil.py <modlistfile> [flags]")
+    print("")
+    print("Actions:\n")
+    print("There are 4 actions: search, get_version, find_dependencies and download\nThey can be run separately or one after the other\nin that case the next action fill use the result of the previous one\nactions must be run in order search, get_version, (find_dependencies), download\nfind_dependencies is optional but recomended\n")
+    print("Flags:\n")
+    print("-s - Search\npreforms the search action\n")
+    print("-g - Get version\npreforms the get_version action\n")
+    print("-f - Find dependencies\npreforms the find_dependencies action\n")
+    print("-d - Download\npreforms the download action\n")
+    print("-o <out_file> - Output\nsets output file name, pass . as argument to print to console\n")
+    print("-c <max_count> - max hit Count\namount of hits to show when searching (capped at 20), pass 1 to automatically choose first hit\n")
+    print("-v <version> - Version\nchooses which Minecraft version to use when searching or getting version (defaults to newest mc version), pass * to search for any version\n")
+    print("-l <loader> - Loader\nsets which mod loader to search mods for\n")
+    print("-h - Help\ndisplays this text\n")
+    print("-u - output URLs\noutputs URLs rather than ids\n")
+
+
+
+
+
+
+
 args = parse_args()
+if("-h" in args):
+    display_help_text()
+    exit()
+
 
 # Set variables based on provided flags (its so fucking ugly :sob: )
 
@@ -49,7 +84,13 @@ get_version = "-g" in args.keys()
 find_dependecies = "-f" in args.keys()
 download = "-d" in args.keys()
 
-find_dependecies = find_dependecies or (search and download)
+output_urls = "-u" in args.keys()
+
+if(search and download and not get_version):
+    get_version = True
+    print("Actions do not follow order")
+    print("search\nget_version # MISSING\ndownload\n")
+    print("get_version will be executed implicitly")
 
 if(not (search or find_dependecies or download)):
     print("No action specified!")
@@ -58,7 +99,10 @@ if(not (search or find_dependecies or download)):
 
 # Validate some provided data
 
-known_loaders = ["fabric", "forge", "quilt", "neoforge"]
+top_c = max(1, min(top_c, 20)) # Clamp the max hit count between 1 and 20
+
+# M
+known_loaders = ["forge", "fabric", "neoforge", "quilt"]
 
 # Download action uses already known mod ids and version ids so if the user is only downloading there is no need to verify these variables
 
@@ -66,7 +110,10 @@ print("")
 
 if(search or get_version or find_dependecies):
     if(mc_loader == None):
-        print("Mod loader not specified!")
+        print("Mod loader not specified!\n")
+        print("Specify a loader with the -l flag\n")
+        print("Most common loaders:")
+        print("forge, fabric, neoforge, quilt")
         exit(2)
     if(mc_loader not in known_loaders):
         print(f"Unknown mod loader {mc_loader}")
@@ -97,6 +144,7 @@ if(search or get_version or find_dependecies):
 operating_data = []
 
 def load_data():
+    global _mod_count
     try:
         f = open(ifilename, "r")
     except FileNotFoundError:
@@ -104,9 +152,13 @@ def load_data():
         exit(1)
     for line in f.readlines():
         if("::" in line):
-            operating_data.append(line.strip("\n\r").split("::", 1))
+            a = line.strip("\n\r").split("::", 1)
+            if(a[1] == "__null__"):
+                a[1] = None
+            operating_data.append(a)
         else:
             operating_data.append(line.strip("\n\r"))
+    _mod_count = len(operating_data)
 
 def search_multiple(queries: list):
     selected_mods = []
@@ -146,14 +198,23 @@ def do_search_action():
 
 def do_get_version_action():
     global operating_data
-
+    m = []
+    for i in operating_data:
+        a = get_newest_version_that_supports_minecraft_v(i, m_version, mc_loader)
+        if(a == None):
+            print(f"Could not find matching version for mod id {i}")
+            continue
+        m.append(a)
+    operating_data = m
     pass
 
 
 def do_find_dependencies_action():
     global operating_data
-    print(get_dependencies(operating_data[0]))
-    exit()
+    a = []
+    for m in operating_data:
+        a = a + get_dependencies(m[1])
+    operating_data = operating_data + a
 
 
 
@@ -188,18 +249,31 @@ def output():
             exit(1)
     for l in operating_data:
         if(type(l) == list and len(l) >= 2):
-            out_text(f"{l[0]}::{l[1]}\n")
+            if(output_urls):
+                if(l[1] == None):
+                    out_text(f"https://modrinth.com/mod/{l[0]}\n")
+                else:
+                    out_text(f"https://modrinth.com/mod/{l[0]}/version/{l[1]}\n")
+            else:
+                out_text(f"{l[0]}::{l[1] if l[1]!=None else "__null__"}\n")
         else:
-            out_text(f"{l}\n")
+            if(output_urls):
+                out_text(f"https://modrinth.com/mod/{l}\n")
+            else:
+                out_text(f"{l}\n")
 
 
 
 
 if __name__ == "__main__":
+    global _request_count
     load_data()
     print(ofilename)
     if(search):
         do_search_action()
+    if(get_version):
+        do_get_version_action()
     if(find_dependecies):
         do_find_dependencies_action()
     output()    
+    print(f"\nFinished succesfully with {get_req_count()} request{"s" if get_req_count() > 1 else ""} made, ~{round((get_req_count()/_mod_count)*10)/10} per mod")
