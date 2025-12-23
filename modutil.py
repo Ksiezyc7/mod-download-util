@@ -1,5 +1,3 @@
-import requests
-import defs
 from backend import *
 from args_parser import *
 import re
