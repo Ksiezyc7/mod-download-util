@@ -20,17 +20,17 @@ add_flag("-r", 1) # dependency recursion depth
 
 add_flag("-h") # Help
 
-ofilename = "mods.txt"
+ofilename = "mods.txt" # Output file name
 
-output_urls = False
+output_urls = False # Output URLs rather than ids
 
 ifilename = ""
 top_c = 5 # amount of hits to show, defaults to 5
-mc_loader = None
-m_version = "1.21.11" # minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
-dependecy_search_recursion_depth = 2
+mc_loader = None # Minecraft mod loader to search for
+m_version = "1.21.11" # Minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
+dependecy_search_recursion_depth = 2 # recursion depth for dependency searching
 
-
+# Help text
 def display_help_text():
     time.sleep(0.01)
     print("Usage:")
@@ -75,7 +75,9 @@ def display_help_text():
 
 
 
-args = parse_args()
+args = parse_args() 
+
+
 if("-h" in args):
     display_help_text()
     exit()
@@ -138,10 +140,10 @@ dependecy_search_recursion_depth = max(1, min(dependecy_search_recursion_depth, 
 # M
 known_loaders = ["forge", "fabric", "neoforge", "quilt"]
 
+
+
+
 # Download action uses already known mod ids and version ids so if the user is only downloading there is no need to verify these variables
-
-print("")
-
 if(search or get_version or find_dependecies):
     if(mc_loader == None):
         print("Mod loader not specified!\n")
@@ -175,9 +177,9 @@ if(search or get_version or find_dependecies):
 
 
 
-operating_data = []
+operating_data = [] # main list all actions use
 
-def load_data():
+def load_data(): # Load data from file
     global _mod_count
     try:
         f = open(ifilename, "r")
@@ -194,17 +196,20 @@ def load_data():
             operating_data.append(line.strip("\n\r"))
     _mod_count = len(operating_data)
 
+# Search for mods
 def search_multiple(queries: list):
     selected_mods = []
     for q in queries:
+        # Actually search
         hits = search_mod(q, top_c, m_version, mc_loader)
         if(hits == None):
             continue
+        # If top hit count is 1, automatically select first hit
         if(top_c == 1):
             selected_mods.append(hits[0]["project_id"])
             continue
 
-
+        # TUI stuff
         hit_number = 1
         digit_c = len(str(abs(len(hits))))
         for h in hits:
@@ -212,11 +217,18 @@ def search_multiple(queries: list):
             hit_number += 1
         selected = input("> ")
         print("")
+
+        # Terminate with x
         if(selected.lower() == "x"):
             print("Action aborted by user")
             exit()
+
+        # Use mod selected by user
         if(selected.isdigit() and int(selected) > 0 and int(selected) <= len(hits)):
             selected_mods.append(hits[int(selected) - 1]["project_id"])
+        else:
+            print(f"Invalid option {selected}, skipping...")
+            continue
     return selected_mods
 
 
