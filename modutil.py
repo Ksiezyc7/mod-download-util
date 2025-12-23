@@ -3,6 +3,7 @@ import defs
 from backend import *
 from args_parser import *
 import re
+import time
 
 _mod_count = 0
 
@@ -15,6 +16,9 @@ add_flag("-c", 1) # amount of search hits to show
 add_flag("-v", 1) # minecraft version
 add_flag("-l", 1) # minecraft loader
 add_flag("-u") # output URLs
+add_flag("~~") # Do diagnostics
+
+add_flag("-r", 1) # dependency recursion depth
 
 add_flag("-h") # Help
 
@@ -26,24 +30,46 @@ ifilename = ""
 top_c = 5 # amount of hits to show, defaults to 5
 mc_loader = None
 m_version = "1.21.11" # minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
+dependecy_search_recursion_depth = 2
+
 
 def display_help_text():
+    time.sleep(0.01)
     print("Usage:")
+    time.sleep(0.01)
     print("$ py modutil.py <modlistfile> [flags]")
+    time.sleep(0.01)
     print("")
+    time.sleep(0.01)
     print("Actions:\n")
+    time.sleep(0.01)
     print("There are 4 actions: search, get_version, find_dependencies and download\nThey can be run separately or one after the other\nin that case the next action fill use the result of the previous one\nactions must be run in order search, get_version, (find_dependencies), download\nfind_dependencies is optional but recomended\n")
+    time.sleep(0.01)
     print("Flags:\n")
+    time.sleep(0.01)
     print("-s - Search\npreforms the search action\n")
+    time.sleep(0.01)
     print("-g - Get version\npreforms the get_version action\n")
+    time.sleep(0.01)
     print("-f - Find dependencies\npreforms the find_dependencies action\n")
+    time.sleep(0.01)
     print("-d - Download\npreforms the download action\n")
+    time.sleep(0.01)
     print("-o <out_file> - Output\nsets output file name, pass . as argument to print to console\n")
+    time.sleep(0.01)
     print("-c <max_count> - max hit Count\namount of hits to show when searching (capped at 20), pass 1 to automatically choose first hit\n")
+    time.sleep(0.01)
     print("-v <version> - Version\nchooses which Minecraft version to use when searching or getting version (defaults to newest mc version), pass * to search for any version\n")
+    time.sleep(0.01)
     print("-l <loader> - Loader\nsets which mod loader to search mods for\n")
-    print("-h - Help\ndisplays this text\n")
+    time.sleep(0.01)
     print("-u - output URLs\noutputs URLs rather than ids\n")
+    time.sleep(0.01)
+    print("-r - Recursion depth\nrecursion depth for dependency searching\n")
+    time.sleep(0.01)
+    print("-h - Help\ndisplays this text\n")
+    time.sleep(0.01)
+    print("Add ~~ as one of the arguments to get extra diagnostics info")
 
 
 
@@ -77,6 +103,13 @@ if("-l" in args):
     if(args["-l"][0] != None):
         mc_loader = args["-l"][0]
 
+if("-r" in args):
+    if(args["-r"][0] == None):
+        dependecy_search_recursion_depth = 2
+    else:
+        dependecy_search_recursion_depth = int(args["-r"][0]) if args["-r"][0].isnumeric() else 2
+
+
 # What actions to do
 
 search = "-s" in args.keys()
@@ -85,6 +118,8 @@ find_dependecies = "-f" in args.keys()
 download = "-d" in args.keys()
 
 output_urls = "-u" in args.keys()
+
+do_diagnostics = "~~" in args.keys()
 
 if(search and download and not get_version):
     get_version = True
@@ -100,6 +135,7 @@ if(not (search or find_dependecies or download)):
 # Validate some provided data
 
 top_c = max(1, min(top_c, 20)) # Clamp the max hit count between 1 and 20
+dependecy_search_recursion_depth = max(1, min(dependecy_search_recursion_depth, 7))
 
 # M
 known_loaders = ["forge", "fabric", "neoforge", "quilt"]
@@ -200,6 +236,7 @@ def do_get_version_action():
     global operating_data
     m = []
     for i in operating_data:
+        print(f"Finding version for {i}...")
         a = get_newest_version_that_supports_minecraft_v(i, m_version, mc_loader)
         if(a == None):
             print(f"Could not find matching version for mod id {i}")
@@ -207,15 +244,57 @@ def do_get_version_action():
         m.append(a)
     operating_data = m
     pass
-
+def remove_duplicates(l):
+    a = []
+    k = []
+    for i in l:
+        if(i[0] not in k):
+            a.append(i)
+            k.append(i[0])
+    return a
 
 def do_find_dependencies_action():
     global operating_data
     a = []
-    for m in operating_data:
-        a = a + get_dependencies(m[1])
-    operating_data = operating_data + a
+    print("Searching dependencies...")
+    for _ in range(dependecy_search_recursion_depth):
+        print(f"Iteration ({_+1}/{dependecy_search_recursion_depth})")
+        for m in operating_data:
+            v = get_dependencies(m[1])
+            a = a + v if v != None else []
+        operating_data = operating_data + a
+    operating_data = remove_duplicates(operating_data)
 
+def denullify_version():
+    for i in range(len(operating_data)):
+        if(operating_data[i][1] == None):
+            operating_data[i][1] = get_newest_version_that_supports_minecraft_v(operating_data[i][0], m_version, mc_loader)[1]
+
+
+
+def do_download_action():
+    global operating_data
+    m = []
+    denullify_version()
+    for i in operating_data:
+        m.append(get_download_data(i[1]))
+    operating_data = m
+    
+    if(output_urls):
+        mm = []
+        for i in operating_data:
+            mm.append(i["url"])
+        operating_data = mm
+        return    
+    print(f"Are you sure you want do download {len(operating_data)} file{"s" if len(operating_data) > 1 else ""} Y/n")
+    choice = input("> ")
+    if(len(choice) > 0 and choice[0].lower() == "n"):
+        pass
+    else:
+        for f in operating_data:
+            print(f"Downloading {f["filename"]}")
+            download_file(f["url"], f["filename"])
+        operating_data = []
 
 
 
@@ -267,13 +346,31 @@ def output():
 
 if __name__ == "__main__":
     global _request_count
+
     load_data()
-    print(ofilename)
     if(search):
         do_search_action()
+        print("")
     if(get_version):
         do_get_version_action()
+        print("")
     if(find_dependecies):
         do_find_dependencies_action()
-    output()    
+        print("")
+    if(download):
+        do_download_action()
+    output()  
     print(f"\nFinished succesfully with {get_req_count()} request{"s" if get_req_count() > 1 else ""} made, ~{round((get_req_count()/_mod_count)*10)/10} per mod")
+    if(do_diagnostics):
+        print("\n\n[ Extra diagnostics information ]\n")
+        print(f"Total data recived: {format_byte_count(d_total_data())} ({d_total_data()} B)")
+        print(f"Average request time: ~{round(d_avg_req_time_ms())} ms")
+        print(f"Average transfer rate: {format_byte_count(d_total_data() / (d_total_req_time_ms()/1000))}/s")
+        print("")
+        print(f"Of {d_sent_reqs()+d_cached_reqs()} requests:")
+        if(d_sent_reqs() > d_cached_reqs()):
+            print(f"    {d_sent_reqs()} ({round(d_sent_reqs() / (d_sent_reqs()+d_cached_reqs()) * 100)}%) sent to server")
+            print(f"    {d_cached_reqs()} ({round(d_cached_reqs() / (d_sent_reqs()+d_cached_reqs()) * 100)}%) answered from cache")
+        else:
+            print(f"    {d_cached_reqs()} ({round(d_cached_reqs() / (d_sent_reqs()+d_cached_reqs()) * 100)}%) answered from cache")
+            print(f"    {d_sent_reqs()} ({round(d_sent_reqs() / (d_sent_reqs()+d_cached_reqs()) * 100)}%) sent to server")
