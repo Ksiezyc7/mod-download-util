@@ -256,11 +256,18 @@ def do_get_version_action():
     pass
 def remove_duplicates(l):
     a = []
-    k = []
+    k = {}
     for i in l:
         if(i[0] not in k):
             a.append(i)
-            k.append(i[0])
+            k[i[0]] = i[1]
+        elif(k[i[0]] == None):
+            a.append(i)
+            k[i[0]] = i[1]
+        else:
+            print(f"Version conflict for {i[0]}")
+            print(f"{i[1]} conflicts with {k[i[0]]}")
+            exit(3)
     return a
 
 def do_find_dependencies_action():
