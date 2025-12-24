@@ -2,6 +2,7 @@ from backend import *
 from args_parser import *
 import re
 import time
+from tkinter import filedialog as fd
 
 _mod_count = 0
 
@@ -264,8 +265,10 @@ def remove_duplicates(l):
         elif(k[i[0]] == None):
             a.append(i)
             k[i[0]] = i[1]
+        elif(i[1] == None):
+            continue
         else:
-            print(f"Version conflict for {i[0]}")
+            print(f"\nVersion conflict for {i[0]}")
             print(f"{i[1]} conflicts with {k[i[0]]}")
             exit(3)
     return a
@@ -354,7 +357,7 @@ def output():
                 out_text(f"{l[0]}::{l[1] if l[1]!=None else "__null__"}\n")
         else:
             if(output_urls):
-                out_text(f"https://modrinth.com/mod/{l}\n")
+                out_text(f"{"" if l.startswith("http") else "https://modrinth.com/mod/"}{l}\n")
             else:
                 out_text(f"{l}\n")
 
