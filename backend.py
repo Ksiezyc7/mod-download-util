@@ -146,6 +146,22 @@ def get_download_data(ver_id):
         _d_cached_reqs += 1
         return _download_cache[ver_id]
     else:
+        start_timing()
+        res = requests.request("GET", f"{api_url}/version/{ver_id}", headers={"User-Agent" : user_agent})
+        _request_count += 1
+        _d_sent_reqs += 1
+        _d_req_data.append(len(res.content))
+        record_timing()
+        if(res.status_code != 200):
+            return None
+        json_data = res.json()
+        if("files" in json_data):
+            return json_data["files"][0]["url"]
+
+
+
+
+
         return None
     
 def download_file(url, filename):
