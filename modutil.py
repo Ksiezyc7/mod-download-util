@@ -263,6 +263,8 @@ def remove_duplicates(l):
             a.append(i)
             k[i[0]] = i[1]
         elif(k[i[0]] == None):
+            if(i[1] == None):
+                continue
             a.append(i)
             k[i[0]] = i[1]
         elif(i[1] == None):
