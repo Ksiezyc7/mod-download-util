@@ -2,7 +2,7 @@ from backend import *
 from args_parser import *
 import re
 import time
-from tkinter import filedialog as fd
+import os
 
 _mod_count = 0
 
@@ -29,7 +29,7 @@ ifilename = ""
 top_c = 5 # amount of hits to show, defaults to 5
 mc_loader = None # Minecraft mod loader to search for
 m_version = "1.21.11" # Minecraft version to search for, defaults to newest, as of 17.12.2025 it's 1.21.11
-dependecy_search_recursion_depth = 2 # recursion depth for dependency searching
+dependecy_search_recursion_depth = 6 # recursion depth for dependency searching
 
 # Help text
 def display_help_text():
@@ -296,6 +296,7 @@ def denullify_version():
 
 def do_download_action():
     global operating_data
+    global ofilename
     m = []
     denullify_version()
     for i in operating_data:
@@ -315,8 +316,9 @@ def do_download_action():
     else:
         for f in operating_data:
             print(f"Downloading {f["filename"]}")
-            download_file(f["url"], f["filename"])
+            download_file(f["url"], (ofilename + "/" if os.path.isdir(ofilename) else "") + f["filename"])
         operating_data = []
+        ofilename = None
 
 
 
