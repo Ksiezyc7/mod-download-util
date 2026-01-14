@@ -223,7 +223,10 @@ def search_multiple(queries: list):
         if(selected.lower() == "x"):
             print("Action aborted by user")
             exit()
-
+        # Skip with s
+        elif(selected.lower() == "s"):
+            print("Skipped on user demand")
+            continue
         # Use mod selected by user
         if(selected.isdigit() and int(selected) > 0 and int(selected) <= len(hits)):
             selected_mods.append(hits[int(selected) - 1]["project_id"])
